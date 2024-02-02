@@ -3,6 +3,9 @@ use crate::rpc::error::Error as RPCError;
 use derive_more::{Display, From};
 use serde_json::Error as SerdeError;
 use std::io::Error as IoError;
+use std::num::ParseIntError;
+use std::string::FromUtf8Error;
+use hex::FromHexError;
 
 /// Web3 `Result` type.
 pub type Result<T = ()> = std::result::Result<T, Error>;
@@ -47,13 +50,17 @@ pub enum Error {
     /// web3 internal error
     #[display(fmt = "Internal Web3 error")]
     Internal,
+    /// Transaction reverted
+    #[display(fmt = "Transaction reverted: {}", _0)]
+    #[from(ignore)]
+    Revert(String),
 }
 
 impl std::error::Error for Error {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
         use self::Error::*;
         match *self {
-            Unreachable | Decoder(_) | InvalidResponse(_) | Transport { .. } | Internal => None,
+            Unreachable | Decoder(_) | InvalidResponse(_) | Transport { .. } | Internal | Revert(_) => None,
             Rpc(ref e) => Some(e),
             Io(ref e) => Some(e),
             Recovery(ref e) => Some(e),
@@ -63,6 +70,24 @@ impl std::error::Error for Error {
 
 impl From<SerdeError> for Error {
     fn from(err: SerdeError) -> Self {
+        Error::Decoder(format!("{:?}", err))
+    }
+}
+
+impl From<FromHexError> for Error {
+    fn from(err: FromHexError) -> Self {
+        Error::Decoder(format!("{:?}", err))
+    }
+}
+
+impl From<ParseIntError> for Error {
+    fn from(err: ParseIntError) -> Self {
+        Error::Decoder(format!("{:?}", err))
+    }
+}
+
+impl From<FromUtf8Error> for Error {
+    fn from(err: FromUtf8Error) -> Self {
         Error::Decoder(format!("{:?}", err))
     }
 }
@@ -79,6 +104,7 @@ impl Clone for Error {
             Io(e) => Io(IoError::from(e.kind())),
             Recovery(e) => Recovery(e.clone()),
             Internal => Internal,
+            Revert(s) => Revert(s.clone()),
         }
     }
 }
@@ -94,6 +120,7 @@ impl PartialEq for Error {
             (Rpc(a), Rpc(b)) => a == b,
             (Io(a), Io(b)) => a.kind() == b.kind(),
             (Recovery(a), Recovery(b)) => a == b,
+            (Revert(a), Revert(b)) => a == b,
             _ => false,
         }
     }

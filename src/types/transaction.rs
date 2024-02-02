@@ -108,6 +108,9 @@ pub struct Receipt {
     /// Effective gas price
     #[serde(rename = "effectiveGasPrice")]
     pub effective_gas_price: Option<U256>,
+    /// Transaction revert reason
+    #[serde(rename = "revertReason")]
+    pub revert_reason: Option<String>,
 }
 
 /// Raw bytes of a signed, but not yet sent transaction
@@ -157,10 +160,12 @@ mod tests {
         "transactionHash": "0x422fb0d5953c0c48cbb42fb58e1c30f5e150441c68374d70ca7d4f191fd56f26",
         "transactionIndex": "0x0",
         "status": "0x1",
-        "effectiveGasPrice": "0x100"
+        "effectiveGasPrice": "0x100",
+        "revertReason": "0xa12876ae000000000000000000000000000000000000000000000000000000000000002000000000000000000000000000000000000000000000000000000000000000286469643a696e6479323a746573746e65743a51766b65784a64415a4c6b686a4e4c47506453664b48000000000000000000000000000000000000000000000000"
         }"#;
 
         let _receipt: Receipt = serde_json::from_str(receipt_str).unwrap();
+        println!("{:?}", _receipt);
     }
 
     #[test]
